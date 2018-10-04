@@ -1,6 +1,6 @@
 ---
 title: "R_hw_4"
-author: "Melissa Lowe"
+author: "Melissa Lowe with assistance from Emma Jones, Kaci Pickett, and Jammay Winslow"
 date: "10/3/2018"
 output: word_document
 ---
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### **Maps**
 
-```{r, echo=T, message=F, warning=F}
+```{r, echo=F, message=F, warning=F}
 
 op <- par()
 options(width=80)
@@ -28,19 +28,21 @@ library(latticeExtra) # For layer()
 library(rgdal)
 library(RColorBrewer)
 library(classInt)
+library(gridExtra)
+library(grid)
 ```
 
 ##### Now we need to aggregate the malaria and climatic data over the districts to create a set of statistics for each district. Conveniently, this aggregation I perform results in the rownames of the dataframe being the district codes, which is required for creating what is called a spatial polygons dataframe (we'll create this below).
-```{r, echo=T, message=T, warning=T}
+```{r, echo=FALSE, message=T, warning=T}
 # Note: because I started an Rproject, I can use relative files paths
 # I just need to use './...' to access other folders within this project now
-all2 <- read.csv("~/Desktop/MS YEAR 2/S1/R Class/R Class Notes/MozSyntheticMalaria.csv")
+all2 <- read.csv("~/Desktop/MS YEAR 2/S1/R Class/R Class Notes/R-Class/MozSyntheticMalaria.csv")
 all2$cpt <- (all2$malaria/(all2$Population_UN*all2$u5weight))*1000
 all2.2 <- subset(all2, Epiyear < 2017)
 
 ```
 
-```{r}
+```{r, echo=FALSE}
 table(all2.2$Province)
 
 all2.2 <- subset(all2.2, all2.2$Province != "MAPUTO CIDADE")
@@ -53,7 +55,7 @@ rainProv <- tapply(all2.2$rainTot, list(all2.2$Province, all2.2$Epiyear), mean)
 
 ```
 
-```{r}
+```{r, echo=FALSE}
 
 #want to know statistics for district code and year, rows are distcode and columns are years
 cpt <- as.data.frame(tapply(all2.2$malaria, list(all2.2$admin_1, all2.2$Epiyear), sum))
@@ -64,25 +66,24 @@ tavg <- as.data.frame(tapply(all2.2$tavg, list(all2.2$admin_1, all2.2$Epiyear), 
 colnames(tavg) <- c("t10", "t11", "t12", "t13", "t14", "t15", "t16")
   
 allStats <- as.data.frame(cbind(cpt, rainTot, tavg))
-rownames(allStats) #notice that the row names are the province names
-colnames(allStats)
+#rownames(allStats) #notice that the row names are the province names
+#colnames(allStats)
 
 allStats <- allStats[-6,]
 ```
 
-```{r}
+```{r, echo=FALSE}
 ##### Let's load the district-level administrative shape file for Mozambique.
 
 # read in the Moz shape file for districts
-poly1 <- readShapePoly('~/Desktop/MS YEAR 2/S1/R Class/R Class Notes/Moz_admin2.shp', IDvar="DISTCODE")
+poly1 <- readShapePoly('~/Desktop/MS YEAR 2/S1/R Class/R Class Notes/R-Class/Moz_admin2.shp', IDvar="DISTCODE")
 #this is the polygon file. it's been developed with district codes. RStudio helps recall how to get things out of lists. They're shape files as R stores them
-plot(poly1)
 
-poly2 <- readShapePoly('~/Desktop/MS YEAR 2/S1/R Class/R Class Notes/mozambique_admin1.shp', IDvar="admin_1")
+
+poly2 <- readShapePoly('~/Desktop/MS YEAR 2/S1/R Class/R Class Notes/R-Class/mozambique_admin1.shp', IDvar="admin_1")
 #this is the polygon file. it's been developed with province codes. RStudio helps recall how to get things out of lists. They're shape files as R stores them
-plot(poly2)
 
-table(poly2$NAME1)
+
 
 row.names(allStats) <- c("Cabo Delgado", "Gaza", "Inhambane", "Manica", "Maputo", "Nampula", "Nassa", "Sofala", "Tete", "Zambezia")
 
@@ -94,8 +95,8 @@ polydat <- SpatialPolygonsDataFrame(poly2, allStats)
 
 
 this code is paritally from class, partially from Jimmy and partially from Emma: (Thanks peeps)
-```{r, echo=T, message=T, warning=T, fig.height=8, fig.width=8}
-
+```{r, echo=F, message=T, warning=T, fig.height=8, fig.width=8}
+par(mfrow=c(2,1))
 # MULTIPLE #
 tempPal <- brewer.pal(n = 7, name = "YlOrRd")
 rainPal <- brewer.pal(n = 7, name = "YlGnBu")
@@ -104,7 +105,7 @@ my.palette <- brewer.pal(n = 7, name = "OrRd")
 
 trellis.par.set(sp.theme(regions=list(col = rainPal)))
 
-spplot(polydat, c("cpt11", "cpt12", "cpt13", "cpt14", "cpt15", "cpt16"), 
+p2 <- spplot(polydat, c("cpt11", "cpt12", "cpt13", "cpt14", "cpt15", "cpt16"), 
        names.attr = c("2011", "2012", "2013", "2014", "2015", "2016"), 
        colorkey=list(space="right"), scales = list(draw = TRUE), 
        main = "Total under 5 malaria cases by year", 
@@ -113,93 +114,13 @@ spplot(polydat, c("cpt11", "cpt12", "cpt13", "cpt14", "cpt15", "cpt16"),
 
 
 
-spplot(polydat, c("rain11", "rain12", "rain13", "rain14", "rain15", "rain16"),
+p1 <- spplot(polydat, c("rain11", "rain12", "rain13", "rain14", "rain15", "rain16"),
        names.attr = c("2011", "2012", "2013", "2014", "2015", "2016"), 
        colorkey=list(space="right"), scales = list(draw = TRUE), 
        main = "Total rainfall by year", 
        as.table = TRUE, col.regions = rainPal, col='transparent',  cuts=5)
 #invisible(dev.off())
+
+grid.arrange(p1, p2, ncol = 2)
 ```
 
-
-```{r}
-
-```
-here are the colors available:
-```{r}
-display.brewer.all()
-
-```
-
-
-```{r, echo=T, message=T, warning=T}
-
-my.palette <- brewer.pal(n = 7, name = "YlGnBu")
-# Different color scheme and cuts
-spplot(polydat, "rain16", col.regions = my.palette, cuts = 6, col = "transparent", 
-       main = "Rainfall total", sub = "2016")
-```
-
-
-```{r}
-
-my.palette <- brewer.pal(n = 7, name = "Spectral")
-# Different color scheme and cuts
-spplot(polydat, "rain16", col.regions = my.palette, cuts = 8,  col = "transparent", 
-       main = "Rainfall total", sub = "2016")
-```
-cuts is the number of levels that you want of your colors
-
-##### When you're mapping, it's important to consider color scheme. I used yellows, greens and blues for rain above. I'll use yellow, orange and red for temperature.
-
-```{r, echo=T, message=T, warning=T}
-
-# Temperature
-colours <- rainbow(6, start=0, end=1/6)
-cols <- rev(colours)
-spplot(polydat, "t16", col.regions = cols, cuts = 5, main = "Ave temperature 2016")
-```
-
-You can also get shape files from other countries and you can have it focusing on mozambique with other things
-
-breaks.qt is the way she's breaking the data values to use the palette with. When you set things at the right end of the quantile, it should be inclusive. It might not be including things properly if there are white spaces remaining. Don't use the breaks thing if it results in missing values, just use cuts = 6. 
-
-To make this faster, wrap it in the pdf 
-
-pdf('filepath/filename.pdf')
-
-
-##### I installed RColorBrewer earlier. It has great color palettes. Below I create a few potential palettes for various variables. I also create a couple of plots with mulitple panels using `spplot`.
-```{r, echo=T, message=T, warning=T}
-
-# MULTIPLE #
-tempPal <- brewer.pal(n = 7, name = "YlOrRd")
-rainPal <- brewer.pal(n = 7, name = "YlGnBu")
-#rhPal <- brewer.pal(n = 6, name = "BuPu")
-#sdPal <- brewer.pal(n = 6, name = "Greens")
-my.palette <- brewer.pal(n = 7, name = "OrRd")
-
-breaks.qt <- classIntervals(allStats$cpt16, n = 6, style = "quantile", intervalClosure = "right")
-#trellis.par.set(sp.theme(regions=list(col = rainPal)))
-#pdf('/Users/katiecolborn/Box Sync/MozambiqueMalaria/GatesGCE/Presentations/CSM2018/U5casesByYear.pdf')
-spplot(polydat, c("cpt11", "cpt12", "cpt13", "cpt14", "cpt15", "cpt16"), 
-       names.attr = c("2011", "2012", "2013", "2014", "2015", "2016"), 
-       colorkey=list(space="right"), scales = list(draw = TRUE), 
-       main = "Total under 5 malaria cases by year", 
-       as.table = TRUE, col.regions = tempPal, col="transparent", at = breaks.qt$brks) 
-#creates nice layout
-invisible(dev.off())
-#draw the color key
-#col = transparent suppresses the black border around the shapes
-
-breaks.qt.r <- classIntervals(allStats$rain16, n = 6, style = "quantile", intervalClosure = "right")
-#pdf('/Users/katiecolborn/Box Sync/MozambiqueMalaria/GatesGCE/Presentations/CSM2018/RainfallByYear.pdf')
-spplot(polydat, c("rain11", "rain12", "rain13", "rain14", "rain15", "rain16"), 
-       names.attr = c("2011", "2012", "2013", "2014", "2015", "2016"), 
-       colorkey=list(space="right"), scales = list(draw = TRUE), 
-       main = "Total rainfall by year", 
-       as.table = TRUE, col.regions = rainPal, col="transparent", at = breaks.qt.r$brks)
-#invisible(dev.off())
-
-
-```
